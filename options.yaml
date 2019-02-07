@@ -22,7 +22,7 @@ resources:
 
     #Cluster Config
     prefix: my-swarm
-    zone: us-central1-f
+    zone: asia-south1-c
 
     #Manager Config
     manager_machine_type: n1-standard-1
