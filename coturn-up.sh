@@ -12,12 +12,25 @@
 #  limitations under the License.
 
 # get cluster info from options.yaml
+
 PREFIX=$(awk '{for(i=1;i<=NF;i++) if ($i=="prefix:") print $(i+1)}' options.yaml)
 ZONE=$(awk '{for(i=1;i<=NF;i++) if ($i=="zone:") print $(i+1)}' options.yaml)
 PROJECT_ID=$(gcloud config list project | awk 'FNR ==2 { print $3 }')
 
-echo "Resizing Swarm Deplyoment"
+echo "Creating deployment"
 
-gcloud compute instance-groups managed resize $PREFIX-igm --size $1 --zone $ZONE
+gcloud deployment-manager deployments create $PREFIX-coturn --config options.yaml
 
-echo "Cluster Resized - please wait a minute for new nodes to register or delete"
+echo "Installing Coturn"
+
+# Use GCE Metadata to know when the startup script is complete
+STATUS=$(gcloud compute instances describe $PREFIX-manager --zone $ZONE | awk '/coturn-install-status/{getline;print $2;}' | awk 'FNR ==1 {print $1}')
+while [ "$STATUS" = "pending" ]
+do
+  echo $STATUS
+  sleep 2
+  STATUS=$(gcloud compute instances describe $PREFIX-manager --zone $ZONE | awk '/coturn-install-status/{getline;print $2;}' | awk 'FNR ==1 {print $1}')
+done
+echo $STATUS
+
+echo "Deployment Created!"

@@ -12,7 +12,7 @@ limitations under the License.
 #}
 
 resources:
-- name: {{ properties["prefix"] }}-manager
+- name: {{ properties["prefix"] }}-coturn
   type: compute.v1.instance
   properties:
     zone: {{ properties["zone"] }}
@@ -24,10 +24,10 @@ resources:
       autoDelete: true
       initializeParams:
         diskSizeGb: {{ properties["disk"] }}
-        sourceImage: projects/ubuntu-os-cloud/global/images/ubuntu-1604-xenial-v20160610
+        sourceImage: projects/ubuntu-os-cloud/global/images/ubuntu-1810-cosmic-v20190212
     tags:
       items:
-      - docker-machine
+      - coturn
     networkInterfaces:
     - network: global/networks/default
       accessConfigs:
@@ -44,17 +44,15 @@ resources:
         - "https://www.googleapis.com/auth/compute"
     metadata:
       items:
-      - key: docker-install-status
+      - key: coturn-install-status
         value: pending
       - key: startup-script
         value: |
           sudo apt-get update
-          sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add
-          sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-          sudo apt-get update && sudo apt-get -y install linux-image-extra-$(uname -r) && sudo apt-get -y install docker-ce
-          sudo systemctl start docker
-          sudo docker plugin install --grant-all-permissions rexray/gcepd GCEPD_CONVERTUNDERSCORES=true
-          docker swarm init
-          gcloud compute project-info add-metadata --metadata {{ properties['prefix'] }}-swarm-worker-token=$(docker swarm join-token -q worker),{{ properties['prefix'] }}-swarm-manager-token=$(docker swarm join-token -q manager)
-          yes y | gcloud compute instances add-metadata $(hostname) --metadata docker-install-status=finished --zone {{ properties["zone"] }}
+          sudo apt-get install build-essential libevent-dev libmysqlclient-dev -y
+          wget https://coturn.net/turnserver/v4.5.1.1/turnserver-4.5.1.1.tar.gz && tar xfz turnserver-4.5.1.1.tar.gz
+          cd turnserver-4.5.1.1/
+          ./configure
+          make
+          sudo make install
+          gcloud compute instances add-metadata $(hostname) --metadata coturn-install-status=finished --zone {{ properties["zone"] }}
